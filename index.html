@@ -1,0 +1,116 @@
+<details>
+<summary>📄 <b>クリックでHTMLコード表示</b></summary>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>2048 最適手表示（上限1024）</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 30px; }
+    #grid { display: grid; grid-template-columns: repeat(4, 60px); gap: 5px; justify-content: center; }
+    input { width: 60px; height: 60px; text-align: center; font-size: 18px; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    #result { margin-top: 15px; font-size: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>2048 最適手AI（最大1024）</h2>
+  <p>0 = 空きマス。1024以上は合成不可。</p>
+  <div id="grid">
+    <!-- 16 input fields -->
+    <script>
+      for (let i = 0; i < 16; i++) {
+        document.write('<input type="number" min="0" max="1024" value="0">');
+      }
+    </script>
+  </div>
+  <button onclick="findBestMove()">最適手を表示</button>
+  <div id="result"></div>
+
+  <script>
+    const maxMergeValue = 1024;
+    const directions = ['↑ 上', '→ 右', '↓ 下', '← 左'];
+
+    function readGrid() {
+      const inputs = document.querySelectorAll('#grid input');
+      const values = Array.from(inputs).map(i => parseInt(i.value) || 0);
+      const grid = [];
+      for (let i = 0; i < 4; i++) {
+        grid.push(values.slice(i * 4, i * 4 + 4));
+      }
+      return grid;
+    }
+
+    function copyGrid(grid) {
+      return grid.map(row => row.slice());
+    }
+
+    function rotate(grid) {
+      const newGrid = Array.from({ length: 4 }, () => Array(4).fill(0));
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          newGrid[c][3 - r] = grid[r][c];
+        }
+      }
+      return newGrid;
+    }
+
+    function moveGrid(grid, dir) {
+      let moved = false;
+      let g = copyGrid(grid);
+      for (let i = 0; i < dir; i++) g = rotate(g);
+      for (let r = 0; r < 4; r++) {
+        let row = g[r].filter(v => v !== 0);
+        for (let c = 0; c < row.length - 1; c++) {
+          if (row[c] === row[c + 1] && row[c] !== maxMergeValue) {
+            row[c] *= 2;
+            row[c + 1] = 0;
+            moved = true;
+          }
+        }
+        row = row.filter(v => v !== 0);
+        while (row.length < 4) row.push(0);
+        if (row.some((v, i) => g[r][i] !== v)) moved = true;
+        g[r] = row;
+      }
+      for (let i = 0; i < (4 - dir) % 4; i++) g = rotate(g);
+      return moved ? g : null;
+    }
+
+    function evaluate(grid) {
+      let score = 0, empty = 0;
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          if (grid[r][c] === 0) empty++;
+          score += grid[r][c];
+        }
+      }
+      return score + empty * 10;
+    }
+
+    function findBestMove() {
+      const original = readGrid();
+      let bestDir = null;
+      let bestScore = -Infinity;
+
+      for (let dir = 0; dir < 4; dir++) {
+        const newGrid = moveGrid(original, dir);
+        if (newGrid) {
+          const score = evaluate(newGrid);
+          if (score > bestScore) {
+            bestScore = score;
+            bestDir = dir;
+          }
+        }
+      }
+
+      const result = document.getElementById('result');
+      if (bestDir !== null) {
+        result.textContent = `最適手: ${directions[bestDir]}`;
+      } else {
+        result.textContent = '有効な手がありません（詰み）';
+      }
+    }
+  </script>
+</body>
+</html>
